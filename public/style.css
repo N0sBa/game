@@ -1,0 +1,246 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Arial', sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+
+.container {
+    background: white;
+    border-radius: 20px;
+    padding: 20px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    max-width: 700px;
+    width: 100%;
+}
+
+.header {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.header h1 {
+    color: #333;
+    margin-bottom: 10px;
+    font-size: 28px;
+}
+
+.info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.info p {
+    color: #666;
+    font-size: 14px;
+}
+
+#playerCount {
+    font-weight: bold;
+    color: #667eea;
+}
+
+#gameCanvas {
+    display: block;
+    margin: 0 auto;
+    border: 3px solid #333;
+    border-radius: 10px;
+    background: #2c3e50;
+    cursor: crosshair;
+    outline: none;
+}
+
+#gameCanvas:focus {
+    border: 3px solid #667eea;
+    box-shadow: 0 0 10px rgba(102, 126, 234, 0.5);
+}
+
+.status-message {
+    text-align: center;
+    padding: 10px;
+    margin-bottom: 10px;
+    background: #fff3cd;
+    border: 2px solid #ffc107;
+    border-radius: 8px;
+    color: #856404;
+    font-weight: bold;
+    transition: opacity 0.3s;
+}
+
+.status-message.hidden {
+    display: none;
+}
+
+.name-input-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 15px;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 10px;
+    flex-wrap: wrap;
+}
+
+.name-input-container label {
+    color: #333;
+    font-weight: bold;
+    font-size: 14px;
+}
+
+.name-input-container input {
+    padding: 8px 12px;
+    border: 2px solid #667eea;
+    border-radius: 6px;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.3s;
+    min-width: 150px;
+}
+
+.name-input-container input:focus {
+    border-color: #764ba2;
+}
+
+.name-input-container button {
+    padding: 8px 20px;
+    background: #667eea;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+
+.name-input-container button:hover {
+    background: #764ba2;
+}
+
+.name-input-container button:active {
+    transform: scale(0.98);
+}
+
+.scoreboard {
+    margin-bottom: 15px;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 10px;
+    border: 2px solid #667eea;
+}
+
+.scoreboard h3 {
+    color: #333;
+    margin-bottom: 10px;
+    font-size: 18px;
+    text-align: center;
+}
+
+#scoreboardContent {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.scoreboard-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    background: white;
+    border-radius: 6px;
+    border-left: 4px solid #667eea;
+    transition: transform 0.2s;
+}
+
+.scoreboard-item:hover {
+    transform: translateX(5px);
+}
+
+.scoreboard-item.my-player {
+    background: #e3f2fd;
+    border-left-color: #3498db;
+    font-weight: bold;
+}
+
+.scoreboard-item .player-name {
+    color: #333;
+    flex: 1;
+}
+
+.scoreboard-item .player-kills {
+    color: #667eea;
+    font-weight: bold;
+    font-size: 16px;
+    min-width: 50px;
+    text-align: right;
+}
+
+.scoreboard-item .rank {
+    color: #999;
+    font-size: 14px;
+    margin-right: 10px;
+    min-width: 25px;
+}
+
+.instructions {
+    margin-top: 20px;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 10px;
+}
+
+.instructions h3 {
+    color: #333;
+    margin-bottom: 10px;
+}
+
+.instructions ul {
+    list-style: none;
+    padding-left: 0;
+}
+
+.instructions li {
+    color: #666;
+    margin: 5px 0;
+    padding-left: 20px;
+    position: relative;
+}
+
+.instructions li:before {
+    content: "▶";
+    position: absolute;
+    left: 0;
+    color: #667eea;
+}
+
+@media (max-width: 768px) {
+    .container {
+        padding: 15px;
+    }
+    
+    #gameCanvas {
+        width: 100%;
+        height: auto;
+    }
+    
+    .header h1 {
+        font-size: 24px;
+    }
+}
+

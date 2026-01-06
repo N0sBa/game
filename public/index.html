@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tank Multiplayer Game</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎮 Tank Battle - Multiplayer</h1>
+            <div class="info">
+                <p>Controls: WASD to move, Mouse to aim and shoot</p>
+                <p id="playerCount">Players: 0</p>
+            </div>
+        </div>
+        <div id="nameInputContainer" class="name-input-container">
+            <label for="playerName">Enter your tank name:</label>
+            <input type="text" id="playerName" placeholder="Tank Name" maxlength="15" />
+            <button id="setNameBtn">Set Name</button>
+        </div>
+        <div id="statusMessage" class="status-message">Click on the game to start playing!</div>
+        <div id="scoreboard" class="scoreboard">
+            <h3>🏆 Scoreboard</h3>
+            <div id="scoreboardContent"></div>
+        </div>
+        <canvas id="gameCanvas" width="640" height="640"></canvas>
+        <div class="instructions">
+            <h3>How to Play:</h3>
+            <ul>
+                <li><strong>W/A/S/D</strong> - Move your tank</li>
+                <li><strong>Mouse</strong> - Aim your tank</li>
+                <li><strong>Left Click</strong> - Shoot bullets</li>
+                <li><strong>Items</strong> - Collect power-ups that appear randomly!</li>
+                <li>Destroy other players to win!</li>
+            </ul>
+        </div>
+    </div>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="game.js"></script>
+</body>
+</html>
+
