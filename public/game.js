@@ -10,6 +10,16 @@ let gameState = {
     myPlayerId: null
 };
 
+// Client-side prediction state
+let predictedState = {
+    x: 0,
+    y: 0,
+    angle: 0
+};
+
+// Interpolation state for other players
+let interpolatedPlayers = {};
+
 let keys = {
     w: false,
     a: false,
@@ -19,6 +29,17 @@ let keys = {
 
 let mousePos = { x: 0, y: 0 };
 let playerName = 'Player'; // Default name
+
+// Sound system
+const bgMusic = document.getElementById('bgMusic');
+const killSound = document.getElementById('killSound');
+let previousKills = 0; // Track previous kill count to detect new kills
+
+// Game constants (must match server)
+const PLAYER_SPEED = 3;
+const PLAYER_SPEED_BOOST = 5;
+const PLAYER_WIDTH = 32;
+const PLAYER_HEIGHT = 32;
 
 // Handle name input
 const nameInput = document.getElementById('playerName');
@@ -50,6 +71,8 @@ socket.on('connect', () => {
     console.log('Connected to server:', socket.id);
     // Send default name on connect
     socket.emit('setPlayerName', playerName);
+    // Initialize kill tracking
+    previousKills = 0;
     // Focus canvas when connected so keyboard works immediately
     canvas.focus();
 });
@@ -58,6 +81,77 @@ socket.on('connect', () => {
 socket.on('gameState', (state) => {
     // Preserve myPlayerId when updating game state
     const myId = gameState.myPlayerId;
+    
+    // Update interpolated positions for other players
+    const now = Date.now();
+    for (const playerId in state.players) {
+        if (playerId !== myId) {
+            const serverPlayer = state.players[playerId];
+            if (!interpolatedPlayers[playerId]) {
+                interpolatedPlayers[playerId] = {
+                    x: serverPlayer.x,
+                    y: serverPlayer.y,
+                    angle: serverPlayer.angle,
+                    prevX: serverPlayer.x,
+                    prevY: serverPlayer.y,
+                    prevAngle: serverPlayer.angle,
+                    updateTime: now
+                };
+            } else {
+                // Store previous position for interpolation
+                interpolatedPlayers[playerId].prevX = interpolatedPlayers[playerId].x;
+                interpolatedPlayers[playerId].prevY = interpolatedPlayers[playerId].y;
+                interpolatedPlayers[playerId].prevAngle = interpolatedPlayers[playerId].angle;
+                // Update to new server position
+                interpolatedPlayers[playerId].x = serverPlayer.x;
+                interpolatedPlayers[playerId].y = serverPlayer.y;
+                interpolatedPlayers[playerId].angle = serverPlayer.angle;
+                interpolatedPlayers[playerId].updateTime = now;
+            }
+            // Copy other properties
+            Object.assign(interpolatedPlayers[playerId], {
+                health: serverPlayer.health,
+                name: serverPlayer.name,
+                kills: serverPlayer.kills,
+                speedBoost: serverPlayer.speedBoost,
+                damageBoost: serverPlayer.damageBoost,
+                width: serverPlayer.width,
+                height: serverPlayer.height
+            });
+        }
+    }
+    
+    // Remove disconnected players from interpolation
+    for (const playerId in interpolatedPlayers) {
+        if (!state.players[playerId]) {
+            delete interpolatedPlayers[playerId];
+        }
+    }
+    
+    // Server reconciliation for my player (smooth correction)
+    if (myId && state.players[myId]) {
+        const serverPlayer = state.players[myId];
+        const predictedX = predictedState.x;
+        const predictedY = predictedState.y;
+        
+        // Calculate difference
+        const diffX = Math.abs(serverPlayer.x - predictedX);
+        const diffY = Math.abs(serverPlayer.y - predictedY);
+        
+        // If difference is significant, smoothly correct
+        if (diffX > 5 || diffY > 5) {
+            // Smooth correction (lerp 20% towards server position)
+            predictedState.x += (serverPlayer.x - predictedX) * 0.2;
+            predictedState.y += (serverPlayer.y - predictedY) * 0.2;
+        } else {
+            // Small difference, just snap to server position
+            predictedState.x = serverPlayer.x;
+            predictedState.y = serverPlayer.y;
+        }
+        
+        predictedState.angle = serverPlayer.angle;
+    }
+    
     gameState = state;
     gameState.myPlayerId = myId; // Restore myPlayerId
     updatePlayerCount();
@@ -85,6 +179,17 @@ function updateScoreboard() {
             kills: player.kills || 0
         }))
         .sort((a, b) => b.kills - a.kills); // Sort descending by kills
+    
+    // Check for new kills (kill sound detection)
+    if (gameState.myPlayerId && gameState.players[gameState.myPlayerId]) {
+        const myPlayer = gameState.players[gameState.myPlayerId];
+        const currentKills = myPlayer.kills || 0;
+        if (currentKills > previousKills) {
+            // Player got a new kill!
+            playKillSound();
+            previousKills = currentKills;
+        }
+    }
     
     // Clear existing content
     scoreboardContent.innerHTML = '';
@@ -401,4 +506,129 @@ function updateLoop(currentTime) {
 
 // Start update loop
 requestAnimationFrame(updateLoop);
+
+// Sound management functions
+// Load background music from /audio/bgmusic.mp3
+async function setBackgroundMusic() {
+    const audioPath = '/audio/bgmusic.mp3';
+    
+    console.log('Loading background music from:', audioPath);
+    
+    // Clear previous source
+    bgMusic.pause();
+    bgMusic.src = '';
+    bgMusic.load();
+    
+    // Set audio file path
+    bgMusic.src = audioPath;
+    bgMusic.loop = true; // Ensure infinite loop
+    bgMusic.volume = 0.5; // Set volume to 50%
+    
+    // Load the audio source
+    bgMusic.load();
+    
+    // Wait for audio to be ready
+    bgMusic.addEventListener('canplaythrough', () => {
+        console.log('Background music ready to play');
+        // Try to play, but handle autoplay restrictions
+        bgMusic.play().then(() => {
+            console.log('Background music started');
+        }).catch(error => {
+            console.warn('Could not autoplay background music:', error);
+            console.log('Music will start when user interacts with the page');
+        });
+    }, { once: true });
+    
+    bgMusic.addEventListener('error', (e) => {
+        console.error('Background music error:', e);
+        console.error('Audio element error:', bgMusic.error);
+        if (bgMusic.error) {
+            const errorMessages = {
+                1: 'MEDIA_ERR_ABORTED - The user aborted the loading',
+                2: 'MEDIA_ERR_NETWORK - A network error occurred',
+                3: 'MEDIA_ERR_DECODE - The audio file is corrupted or format not supported',
+                4: 'MEDIA_ERR_SRC_NOT_SUPPORTED - The audio format is not supported or file not found'
+            };
+            const errorMsg = errorMessages[bgMusic.error.code] || bgMusic.error.message;
+            console.error('Error code:', bgMusic.error.code);
+            console.error('Error message:', errorMsg);
+            console.error(`Failed to load background music from ${audioPath}. Please ensure the file exists in public/audio/ folder.`);
+        }
+    });
+}
+
+// Load kill sound from /audio/killsound.mp3
+async function setKillSound() {
+    const audioPath = '/audio/killsound.mp3';
+    
+    console.log('Loading kill sound from:', audioPath);
+    
+    // Clear previous source
+    killSound.pause();
+    killSound.src = '';
+    killSound.load();
+    
+    // Set audio file path
+    killSound.src = audioPath;
+    killSound.volume = 0.7; // Set volume to 70%
+    
+    // Load the audio source
+    killSound.load();
+    
+    // Wait for audio to be ready
+    killSound.addEventListener('canplaythrough', () => {
+        console.log('Kill sound ready to play');
+    }, { once: true });
+    
+    killSound.addEventListener('error', (e) => {
+        console.error('Kill sound error:', e);
+        console.error('Audio element error:', killSound.error);
+        if (killSound.error) {
+            const errorMessages = {
+                1: 'MEDIA_ERR_ABORTED - The user aborted the loading',
+                2: 'MEDIA_ERR_NETWORK - A network error occurred',
+                3: 'MEDIA_ERR_DECODE - The audio file is corrupted or format not supported',
+                4: 'MEDIA_ERR_SRC_NOT_SUPPORTED - The audio format is not supported or file not found'
+            };
+            const errorMsg = errorMessages[killSound.error.code] || killSound.error.message;
+            console.error('Error code:', killSound.error.code);
+            console.error('Error message:', errorMsg);
+            console.error(`Failed to load kill sound from ${audioPath}. Please ensure the file exists in public/audio/ folder.`);
+        }
+    });
+}
+
+function playKillSound() {
+    if (killSound.src && killSound.src !== window.location.href) {
+        killSound.currentTime = 0; // Reset to start
+        killSound.play().catch(error => {
+            console.warn('Could not play kill sound:', error);
+        });
+    }
+}
+
+// Initialize audio files on page load
+window.addEventListener('load', () => {
+    // Load audio files directly from /audio/ folder
+    setBackgroundMusic();
+    setKillSound();
+});
+
+// Start background music when user interacts (to bypass autoplay restrictions)
+let musicStarted = false;
+function startMusicOnInteraction() {
+    if (!musicStarted && bgMusic.src && bgMusic.src !== window.location.href) {
+        bgMusic.play().then(() => {
+            musicStarted = true;
+            console.log('Background music started on user interaction');
+        }).catch(error => {
+            console.warn('Could not start background music:', error);
+        });
+    }
+}
+
+// Listen for user interactions to start music
+document.addEventListener('click', startMusicOnInteraction, { once: true });
+document.addEventListener('keydown', startMusicOnInteraction, { once: true });
+canvas.addEventListener('click', startMusicOnInteraction, { once: true });
 

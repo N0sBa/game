@@ -20,6 +20,28 @@
             <input type="text" id="playerName" placeholder="Tank Name" maxlength="15" />
             <button id="setNameBtn">Set Name</button>
         </div>
+        <!-- Sound configuration removed - using fixed audio files from /audio/ folder -->
+        <div id="soundConfigContainer" class="sound-config-container" style="display: none;">
+            <h4>🔊 Sound Settings</h4>
+            <div class="sound-input-group">
+                <label for="bgMusicUrl">Background Music:</label>
+                <input type="text" id="bgMusicUrl" placeholder="Enter audio file URL (e.g., /audio/bgmusic.mp3)" />
+                <button id="setBgMusicBtn">Set Music</button>
+            </div>
+            <div class="sound-input-group">
+                <label for="killSoundUrl">Kill Sound:</label>
+                <input type="text" id="killSoundUrl" placeholder="Enter audio file URL (e.g., /audio/killsound.mp3)" />
+                <button id="setKillSoundBtn">Set Kill Sound</button>
+            </div>
+            <div class="sound-help">
+                <small>💡 Tip: Place your .mp3 files in the <code>public/audio/</code> folder and use paths like <code>/audio/filename.mp3</code>. Background music will loop infinitely.</small>
+                <br>
+                <small>📁 Available files: <code>/audio/bgmusic.mp3</code>, <code>/audio/killsound.mp3</code></small>
+            </div>
+        </div>
+        <!-- Audio elements -->
+        <audio id="bgMusic" loop preload="auto"></audio>
+        <audio id="killSound" preload="auto"></audio>
         <div id="statusMessage" class="status-message">Click on the game to start playing!</div>
         <div id="scoreboard" class="scoreboard">
             <h3>🏆 Scoreboard</h3>
