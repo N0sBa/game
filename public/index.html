@@ -2,7 +2,9 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Tank Multiplayer Game</title>
     <link rel="stylesheet" href="style.css">
 </head>
@@ -11,7 +13,7 @@
         <div class="header">
             <h1>🎮 Tank Battle - Multiplayer</h1>
             <div class="info">
-                <p>Controls: WASD to move, Mouse to aim and shoot</p>
+                <p id="controlsInfo">Controls: WASD to move, Mouse to aim and shoot</p>
                 <p id="playerCount">Players: 0</p>
             </div>
         </div>
@@ -47,13 +49,24 @@
             <h3>🏆 Scoreboard</h3>
             <div id="scoreboardContent"></div>
         </div>
-        <canvas id="gameCanvas" width="640" height="640"></canvas>
+        <div class="canvas-wrapper">
+            <canvas id="gameCanvas" width="640" height="640"></canvas>
+            <!-- Mobile Virtual Joystick -->
+            <div id="joystickContainer" class="joystick-container">
+                <div id="joystickBase" class="joystick-base">
+                    <div id="joystickHandle" class="joystick-handle"></div>
+                </div>
+            </div>
+        </div>
         <div class="instructions">
             <h3>How to Play:</h3>
-            <ul>
-                <li><strong>W/A/S/D</strong> - Move your tank</li>
-                <li><strong>Mouse</strong> - Aim your tank</li>
-                <li><strong>Left Click</strong> - Shoot bullets</li>
+            <ul id="instructionsList">
+                <li class="desktop-controls"><strong>W/A/S/D</strong> - Move your tank</li>
+                <li class="desktop-controls"><strong>Mouse</strong> - Aim your tank</li>
+                <li class="desktop-controls"><strong>Left Click</strong> - Shoot bullets</li>
+                <li class="mobile-controls" style="display: none;"><strong>Virtual Joystick</strong> - Move your tank</li>
+                <li class="mobile-controls" style="display: none;"><strong>Touch & Drag</strong> - Aim your tank</li>
+                <li class="mobile-controls" style="display: none;"><strong>Tap</strong> - Shoot bullets</li>
                 <li><strong>Items</strong> - Collect power-ups that appear randomly!</li>
                 <li>Destroy other players to win!</li>
             </ul>
