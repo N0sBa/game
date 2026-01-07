@@ -33,22 +33,30 @@ let playerName = 'Player'; // Default name
 // Mobile touch controls
 let isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 let touchControls = {
-    joystick: {
+    moveJoystick: {
         active: false,
+        touchId: null,
         startX: 0,
         startY: 0,
         currentX: 0,
         currentY: 0,
-        radius: 60,
-        baseRadius: 60
+        radius: 50
     },
-    aimTouch: {
+    aimJoystick: {
         active: false,
         touchId: null,
-        x: 0,
-        y: 0
+        startX: 0,
+        startY: 0,
+        currentX: 0,
+        currentY: 0,
+        radius: 50,
+        angle: 0
     }
 };
+
+// Auto-fire interval for mobile
+let autoFireInterval = null;
+const AUTO_FIRE_RATE = 250; // Fire every 250ms when aiming
 
 // Sound system
 const bgMusic = document.getElementById('bgMusic');
@@ -313,36 +321,31 @@ canvas.addEventListener('mousemove', (e) => {
     }
 });
 
-// Mobile touch controls - Virtual Joystick
-let joystickBase = null;
-let joystickHandle = null;
+// Mobile touch controls - Dual Virtual Joysticks
+let moveJoystickBase = null;
+let moveJoystickHandle = null;
+let aimJoystickBase = null;
+let aimJoystickHandle = null;
 
-function getTouchPos(e, touchIndex = 0) {
-    const rect = canvas.getBoundingClientRect();
-    const touch = e.touches[touchIndex] || e.changedTouches[touchIndex];
-    return {
-        x: touch.clientX - rect.left,
-        y: touch.clientY - rect.top,
-        clientX: touch.clientX,
-        clientY: touch.clientY
-    };
-}
-
-function updateJoystickVisual() {
-    if (!joystickHandle || !joystickBase || !touchControls.joystick.active) {
+function updateJoystickVisual(type) {
+    const joystickData = type === 'move' ? touchControls.moveJoystick : touchControls.aimJoystick;
+    const base = type === 'move' ? moveJoystickBase : aimJoystickBase;
+    const handle = type === 'move' ? moveJoystickHandle : aimJoystickHandle;
+    
+    if (!handle || !base) return;
+    
+    if (!joystickData.active) {
         // Reset to center if not active
-        if (joystickHandle) {
-            joystickHandle.style.left = '50%';
-            joystickHandle.style.top = '50%';
-            joystickHandle.style.transform = 'translate(-50%, -50%)';
-        }
+        handle.style.left = '50%';
+        handle.style.top = '50%';
+        handle.style.transform = 'translate(-50%, -50%)';
         return;
     }
     
-    const dx = touchControls.joystick.currentX - touchControls.joystick.startX;
-    const dy = touchControls.joystick.currentY - touchControls.joystick.startY;
+    const dx = joystickData.currentX - joystickData.startX;
+    const dy = joystickData.currentY - joystickData.startY;
     const distance = Math.sqrt(dx * dx + dy * dy);
-    const maxDistance = touchControls.joystick.radius;
+    const maxDistance = joystickData.radius;
     
     let moveX = dx;
     let moveY = dy;
@@ -352,90 +355,22 @@ function updateJoystickVisual() {
         moveY = (dy / distance) * maxDistance;
     }
     
-    const rect = joystickBase.getBoundingClientRect();
+    const rect = base.getBoundingClientRect();
     const baseCenterX = rect.width / 2;
     const baseCenterY = rect.height / 2;
     
-    joystickHandle.style.left = (baseCenterX + moveX - joystickHandle.offsetWidth / 2) + 'px';
-    joystickHandle.style.top = (baseCenterY + moveY - joystickHandle.offsetHeight / 2) + 'px';
-    joystickHandle.style.transform = 'none';
+    handle.style.left = (baseCenterX + moveX) + 'px';
+    handle.style.top = (baseCenterY + moveY) + 'px';
+    handle.style.transform = 'translate(-50%, -50%)';
 }
 
-function initJoystick() {
-    joystickBase = document.getElementById('joystickBase');
-    joystickHandle = document.getElementById('joystickHandle');
+function updateKeysFromMoveJoystick() {
+    if (!touchControls.moveJoystick.active) return;
     
-    if (!joystickBase || !joystickHandle) return;
-    
-    // Joystick touch handlers
-    joystickBase.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        const rect = joystickBase.getBoundingClientRect();
-        const touch = e.touches[0];
-        touchControls.joystick.startX = rect.left + rect.width / 2;
-        touchControls.joystick.startY = rect.top + rect.height / 2;
-        touchControls.joystick.currentX = touch.clientX;
-        touchControls.joystick.currentY = touch.clientY;
-        touchControls.joystick.active = true;
-        updateJoystickVisual();
-    }, { passive: false });
-
-    let joystickTouchId = null;
-    
-    document.addEventListener('touchmove', (e) => {
-        if (touchControls.joystick.active) {
-            // Find the touch that started on the joystick
-            for (let i = 0; i < e.touches.length; i++) {
-                const touch = e.touches[i];
-                if (joystickTouchId === null || touch.identifier === joystickTouchId) {
-                    e.preventDefault();
-                    touchControls.joystick.currentX = touch.clientX;
-                    touchControls.joystick.currentY = touch.clientY;
-                    updateJoystickVisual();
-                    updateKeysFromJoystick();
-                    if (joystickTouchId === null) {
-                        joystickTouchId = touch.identifier;
-                    }
-                    break;
-                }
-            }
-        }
-    }, { passive: false });
-
-    document.addEventListener('touchend', (e) => {
-        if (touchControls.joystick.active) {
-            let touchEnded = false;
-            for (let i = 0; i < e.changedTouches.length; i++) {
-                if (e.changedTouches[i].identifier === joystickTouchId || joystickTouchId === null) {
-                    touchEnded = true;
-                    break;
-                }
-            }
-            if (touchEnded) {
-                e.preventDefault();
-                touchControls.joystick.active = false;
-                joystickTouchId = null;
-                const rect = joystickBase.getBoundingClientRect();
-                touchControls.joystick.currentX = rect.left + rect.width / 2;
-                touchControls.joystick.currentY = rect.top + rect.height / 2;
-                keys.w = false;
-                keys.a = false;
-                keys.s = false;
-                keys.d = false;
-                updateJoystickVisual();
-            }
-        }
-    }, { passive: false });
-}
-
-function updateKeysFromJoystick() {
-    if (!touchControls.joystick.active) return;
-    
-    const dx = touchControls.joystick.currentX - touchControls.joystick.startX;
-    const dy = touchControls.joystick.currentY - touchControls.joystick.startY;
+    const dx = touchControls.moveJoystick.currentX - touchControls.moveJoystick.startX;
+    const dy = touchControls.moveJoystick.currentY - touchControls.moveJoystick.startY;
     const distance = Math.sqrt(dx * dx + dy * dy);
-    const threshold = 20; // Minimum distance to register movement
+    const threshold = 15; // Minimum distance to register movement
     
     if (distance < threshold) {
         keys.w = false;
@@ -450,89 +385,180 @@ function updateKeysFromJoystick() {
     const normalizedDy = Math.sin(angle);
     
     // Determine direction based on angle
-    keys.w = normalizedDy < -0.5;
-    keys.s = normalizedDy > 0.5;
-    keys.a = normalizedDx < -0.5;
-    keys.d = normalizedDx > 0.5;
+    keys.w = normalizedDy < -0.4;
+    keys.s = normalizedDy > 0.4;
+    keys.a = normalizedDx < -0.4;
+    keys.d = normalizedDx > 0.4;
 }
 
-// Canvas touch handlers for aiming and shooting
-canvas.addEventListener('touchstart', (e) => {
-    if (!isMobile) return;
+function updateAimFromAimJoystick() {
+    if (!touchControls.aimJoystick.active) return;
+    if (!gameState.myPlayerId || !gameState.players[gameState.myPlayerId]) return;
     
-    const touch = e.touches[0];
-    const pos = getTouchPos(e, 0);
+    const dx = touchControls.aimJoystick.currentX - touchControls.aimJoystick.startX;
+    const dy = touchControls.aimJoystick.currentY - touchControls.aimJoystick.startY;
+    const distance = Math.sqrt(dx * dx + dy * dy);
     
-    // Check if this touch is for aiming (not joystick)
-    if (joystickBase) {
-        const joystickRect = joystickBase.getBoundingClientRect();
-        const touchX = touch.clientX;
-        const touchY = touch.clientY;
-        
-        // If touch is in joystick area, ignore it
-        if (touchX >= joystickRect.left && touchX <= joystickRect.right &&
-            touchY >= joystickRect.top && touchY <= joystickRect.bottom) {
-            return;
-        }
-    }
+    if (distance < 10) return; // Dead zone
     
-    e.preventDefault();
+    // Calculate aim angle from joystick direction
+    touchControls.aimJoystick.angle = Math.atan2(dy, dx);
     
-    // Set aim position and shoot
-    mousePos.x = pos.x;
-    mousePos.y = pos.y;
-    touchControls.aimTouch.active = true;
-    touchControls.aimTouch.touchId = touch.identifier;
-    touchControls.aimTouch.x = pos.x;
-    touchControls.aimTouch.y = pos.y;
+    // Convert joystick direction to aim position on canvas
+    const player = gameState.players[gameState.myPlayerId];
+    const playerCenterX = player.x + player.width / 2;
+    const playerCenterY = player.y + player.height / 2;
     
-    // Shoot on touch
+    // Set aim point in the direction of the joystick, at a fixed distance
+    const aimDistance = 100;
+    mousePos.x = playerCenterX + Math.cos(touchControls.aimJoystick.angle) * aimDistance;
+    mousePos.y = playerCenterY + Math.sin(touchControls.aimJoystick.angle) * aimDistance;
+}
+
+function startAutoFire() {
+    if (autoFireInterval) return;
+    // Fire immediately
     socket.emit('shoot');
+    // Then fire at interval
+    autoFireInterval = setInterval(() => {
+        if (touchControls.aimJoystick.active) {
+            socket.emit('shoot');
+        }
+    }, AUTO_FIRE_RATE);
+}
+
+function stopAutoFire() {
+    if (autoFireInterval) {
+        clearInterval(autoFireInterval);
+        autoFireInterval = null;
+    }
+}
+
+function initDualJoysticks() {
+    moveJoystickBase = document.getElementById('moveJoystickBase');
+    moveJoystickHandle = document.getElementById('moveJoystickHandle');
+    aimJoystickBase = document.getElementById('aimJoystickBase');
+    aimJoystickHandle = document.getElementById('aimJoystickHandle');
+    
+    if (!moveJoystickBase || !aimJoystickBase) return;
+    
+    // Move joystick touch handlers
+    moveJoystickBase.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const rect = moveJoystickBase.getBoundingClientRect();
+        const touch = e.changedTouches[0];
+        touchControls.moveJoystick.touchId = touch.identifier;
+        touchControls.moveJoystick.startX = rect.left + rect.width / 2;
+        touchControls.moveJoystick.startY = rect.top + rect.height / 2;
+        touchControls.moveJoystick.currentX = touch.clientX;
+        touchControls.moveJoystick.currentY = touch.clientY;
+        touchControls.moveJoystick.active = true;
+        updateJoystickVisual('move');
+        updateKeysFromMoveJoystick();
+    }, { passive: false });
+    
+    // Aim joystick touch handlers
+    aimJoystickBase.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const rect = aimJoystickBase.getBoundingClientRect();
+        const touch = e.changedTouches[0];
+        touchControls.aimJoystick.touchId = touch.identifier;
+        touchControls.aimJoystick.startX = rect.left + rect.width / 2;
+        touchControls.aimJoystick.startY = rect.top + rect.height / 2;
+        touchControls.aimJoystick.currentX = touch.clientX;
+        touchControls.aimJoystick.currentY = touch.clientY;
+        touchControls.aimJoystick.active = true;
+        updateJoystickVisual('aim');
+        updateAimFromAimJoystick();
+        startAutoFire();
+    }, { passive: false });
+    
+    // Global touch move handler for both joysticks
+    document.addEventListener('touchmove', (e) => {
+        let handled = false;
+        
+        for (let i = 0; i < e.touches.length; i++) {
+            const touch = e.touches[i];
+            
+            // Handle move joystick
+            if (touchControls.moveJoystick.active && touch.identifier === touchControls.moveJoystick.touchId) {
+                touchControls.moveJoystick.currentX = touch.clientX;
+                touchControls.moveJoystick.currentY = touch.clientY;
+                updateJoystickVisual('move');
+                updateKeysFromMoveJoystick();
+                handled = true;
+            }
+            
+            // Handle aim joystick
+            if (touchControls.aimJoystick.active && touch.identifier === touchControls.aimJoystick.touchId) {
+                touchControls.aimJoystick.currentX = touch.clientX;
+                touchControls.aimJoystick.currentY = touch.clientY;
+                updateJoystickVisual('aim');
+                updateAimFromAimJoystick();
+                handled = true;
+            }
+        }
+        
+        if (handled) {
+            e.preventDefault();
+        }
+    }, { passive: false });
+    
+    // Global touch end handler
+    document.addEventListener('touchend', (e) => {
+        for (let i = 0; i < e.changedTouches.length; i++) {
+            const touch = e.changedTouches[i];
+            
+            // Handle move joystick release
+            if (touchControls.moveJoystick.active && touch.identifier === touchControls.moveJoystick.touchId) {
+                touchControls.moveJoystick.active = false;
+                touchControls.moveJoystick.touchId = null;
+                keys.w = false;
+                keys.a = false;
+                keys.s = false;
+                keys.d = false;
+                updateJoystickVisual('move');
+            }
+            
+            // Handle aim joystick release
+            if (touchControls.aimJoystick.active && touch.identifier === touchControls.aimJoystick.touchId) {
+                touchControls.aimJoystick.active = false;
+                touchControls.aimJoystick.touchId = null;
+                stopAutoFire();
+                updateJoystickVisual('aim');
+            }
+        }
+    }, { passive: false });
+    
+    // Touch cancel handler
+    document.addEventListener('touchcancel', (e) => {
+        touchControls.moveJoystick.active = false;
+        touchControls.moveJoystick.touchId = null;
+        touchControls.aimJoystick.active = false;
+        touchControls.aimJoystick.touchId = null;
+        keys.w = false;
+        keys.a = false;
+        keys.s = false;
+        keys.d = false;
+        stopAutoFire();
+        updateJoystickVisual('move');
+        updateJoystickVisual('aim');
+    }, { passive: false });
+}
+
+// Prevent default touch behaviors on canvas for mobile
+canvas.addEventListener('touchstart', (e) => {
+    if (isMobile) e.preventDefault();
 }, { passive: false });
 
 canvas.addEventListener('touchmove', (e) => {
-    if (!isMobile) return;
-    if (touchControls.aimTouch.active && !touchControls.joystick.active) {
-        e.preventDefault();
-        // Find the touch that matches our aim touch
-        for (let i = 0; i < e.touches.length; i++) {
-            if (e.touches[i].identifier === touchControls.aimTouch.touchId) {
-                const pos = getTouchPos(e, i);
-                mousePos.x = pos.x;
-                mousePos.y = pos.y;
-                touchControls.aimTouch.x = pos.x;
-                touchControls.aimTouch.y = pos.y;
-                break;
-            }
-        }
-    }
+    if (isMobile) e.preventDefault();
 }, { passive: false });
 
 canvas.addEventListener('touchend', (e) => {
-    if (!isMobile) return;
-    if (touchControls.aimTouch.active) {
-        e.preventDefault();
-        // Check if our touch ended
-        let touchEnded = false;
-        for (let i = 0; i < e.changedTouches.length; i++) {
-            if (e.changedTouches[i].identifier === touchControls.aimTouch.touchId) {
-                touchEnded = true;
-                break;
-            }
-        }
-        if (touchEnded) {
-            touchControls.aimTouch.active = false;
-            touchControls.aimTouch.touchId = null;
-        }
-    }
-}, { passive: false });
-
-// Prevent default touch behaviors on canvas
-canvas.addEventListener('touchcancel', (e) => {
-    if (!isMobile) return;
-    e.preventDefault();
-    touchControls.aimTouch.active = false;
-    touchControls.aimTouch.touchId = null;
+    if (isMobile) e.preventDefault();
 }, { passive: false });
 
 // Send player movement to server
@@ -546,18 +572,17 @@ function sendPlayerMove() {
         return;
     }
     
-    // Use touch aim position if active, otherwise use mouse position
-    let aimX = mousePos.x;
-    let aimY = mousePos.y;
+    let angle;
     
-    if (isMobile && touchControls.aimTouch.active) {
-        aimX = touchControls.aimTouch.x;
-        aimY = touchControls.aimTouch.y;
+    // On mobile, use aim joystick angle directly when active
+    if (isMobile && touchControls.aimJoystick.active) {
+        angle = touchControls.aimJoystick.angle;
+    } else {
+        // Use mouse position for desktop or when aim joystick not active
+    const dx = mousePos.x - (player.x + player.width / 2);
+    const dy = mousePos.y - (player.y + player.height / 2);
+        angle = Math.atan2(dy, dx);
     }
-    
-    const dx = aimX - (player.x + player.width / 2);
-    const dy = aimY - (player.y + player.height / 2);
-    const angle = Math.atan2(dy, dx);
     
     socket.emit('playerMove', {
         keys: { ...keys }, // Send a copy of keys object
@@ -868,21 +893,21 @@ function initMobileControls() {
     const controlsInfo = document.getElementById('controlsInfo');
     if (controlsInfo) {
         if (isMobile) {
-            controlsInfo.textContent = 'Controls: Virtual Joystick to move, Touch to aim and shoot';
+            controlsInfo.textContent = 'Left joystick: Move | Right joystick: Aim & Auto-fire';
         } else {
             controlsInfo.textContent = 'Controls: WASD to move, Mouse to aim and shoot';
         }
     }
     
     // Show/hide mobile controls
-    const joystickContainer = document.getElementById('joystickContainer');
-    if (joystickContainer) {
-        joystickContainer.style.display = isMobile ? 'block' : 'none';
+    const mobileControlsContainer = document.getElementById('mobileControlsContainer');
+    if (mobileControlsContainer) {
+        mobileControlsContainer.style.display = isMobile ? 'flex' : 'none';
     }
     
-    // Initialize joystick if on mobile
+    // Initialize dual joysticks if on mobile
     if (isMobile) {
-        initJoystick();
+        initDualJoysticks();
     }
     
     // Make canvas responsive

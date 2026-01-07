@@ -51,10 +51,21 @@
         </div>
         <div class="canvas-wrapper">
             <canvas id="gameCanvas" width="640" height="640"></canvas>
-            <!-- Mobile Virtual Joystick -->
-            <div id="joystickContainer" class="joystick-container">
-                <div id="joystickBase" class="joystick-base">
-                    <div id="joystickHandle" class="joystick-handle"></div>
+            <!-- Mobile Dual Joysticks -->
+            <div id="mobileControlsContainer" class="mobile-controls-container">
+                <!-- Left Joystick - Movement -->
+                <div id="moveJoystickContainer" class="joystick-container left">
+                    <div id="moveJoystickBase" class="joystick-base">
+                        <div id="moveJoystickHandle" class="joystick-handle"></div>
+                    </div>
+                    <span class="joystick-label">MOVE</span>
+                </div>
+                <!-- Right Joystick - Aim & Fire -->
+                <div id="aimJoystickContainer" class="joystick-container right">
+                    <div id="aimJoystickBase" class="joystick-base aim">
+                        <div id="aimJoystickHandle" class="joystick-handle aim"></div>
+                    </div>
+                    <span class="joystick-label">AIM & FIRE</span>
                 </div>
             </div>
         </div>
@@ -64,9 +75,9 @@
                 <li class="desktop-controls"><strong>W/A/S/D</strong> - Move your tank</li>
                 <li class="desktop-controls"><strong>Mouse</strong> - Aim your tank</li>
                 <li class="desktop-controls"><strong>Left Click</strong> - Shoot bullets</li>
-                <li class="mobile-controls" style="display: none;"><strong>Virtual Joystick</strong> - Move your tank</li>
-                <li class="mobile-controls" style="display: none;"><strong>Touch & Drag</strong> - Aim your tank</li>
-                <li class="mobile-controls" style="display: none;"><strong>Tap</strong> - Shoot bullets</li>
+                <li class="mobile-controls" style="display: none;"><strong>Left Joystick</strong> - Move your tank</li>
+                <li class="mobile-controls" style="display: none;"><strong>Right Joystick</strong> - Aim direction</li>
+                <li class="mobile-controls" style="display: none;"><strong>Auto-Fire</strong> - Shoots while aiming!</li>
                 <li><strong>Items</strong> - Collect power-ups that appear randomly!</li>
                 <li>Destroy other players to win!</li>
             </ul>
